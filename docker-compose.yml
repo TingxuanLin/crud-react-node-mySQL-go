@@ -1,0 +1,50 @@
+version: "3.7"
+
+services:
+  mysql:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "123"
+      MYSQL_DATABASE: test
+      MYSQL_PASSWORD: "123"
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p123"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+      timeout: 5s
+
+  frontend:
+    build: ./frontend
+    image: frontend-image
+    container_name: frontend-container
+    ports:
+      - 3000:80
+
+  backend:
+    container_name: backend-container
+    build: ./backend
+    image: backend-image
+    ports:
+      - 8800:8800
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: always
+    environment:
+      DB_HOST: "mysql"
+      DB_USER: "root"
+      DB_PASSWORD: "123"
+      DB_NAME: "test"
+    volumes:
+      - ./backend:/app
+
+volumes:
+  mysql:
+    driver: local
